@@ -30,7 +30,7 @@ There are three integers specifying the state of software:
 #### 3. DFU_STATE
 `dfu_state` is for controlling substates in DFU mode. Available states are:
 1. `0` DFU-off
-2. `1` DFU-on from off
+2. `1` DFU-on from off (DFU Wait for Input)
 3. `2` Serial log device_id
 4. `4` Read EEPROM memory at memory index
 5. `6` Write-update EEPROM memory at memory index with new value
@@ -43,5 +43,7 @@ Commands can be written via Serial command line.
 3. `ENTER_DFU` triggers update `os_state` to `254` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`).
 4. `END_OP` triggers update `os_state` to `255` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`).
 5. `END_READ` triggers update `os_state` to `255` only when in SD Read Mode (`os_state` is `2`).
-6. `SYS_CMD_REQUEST_DEVICE_ID` triggers update `dfu_state` to `2` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`).
-7. `READ_EEPROM` triggers update `dfu_state` to `4` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`). After `READ_EEPROM`
+6. `SYS_CMD_REQUEST_DEVICE_ID` triggers update `dfu_state` to `2` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`). The device will stay in DFU Mode (`dfu_state` returns to `1`).
+7. `READ_EEPROM` triggers update `dfu_state` to `4` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`). After `READ_EEPROM`, user can input Memory index once. The device will stay in DFU Mode (`dfu_state` returns to `1`).
+8. `WRITE_EEPROM` triggers update `dfu_state` to `6` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`). After `WRITE_EEPROM`, user can input Memory Index and then Value to write. If Memory Index or Value is blank, `dfu_state` returns to `1`. If Value is only written if and only if not already existed in Memory Index. This operation **DOES NOT CHECK** whether the EEPROM Memory Index or Value is available. The device will stay in DFU Mode (`dfu_state` returns to `1`).
+9. `SYS_ADMIN_CMD_CLEAR_EEPROM` (name to ensure no accidental deletion) triggers update `dfu_state` to `4` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`).
