@@ -5,6 +5,7 @@
 
 // Imports
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
@@ -72,8 +73,9 @@ SFE_UBLOX_GNSS mainGPS;
 TinyGPSPlus secGPS;
 
 // os_state: 0 is default operation, 1 is wait for sd read, 2 is wait for user input
-// 3 is sd read, 255 is end - restart to reset
+// 3 is sd read, 254 is dfu mode, 255 is end - restart to reset
 u_int8_t os_state = 0;
+u_int8_t dfu_state = 0;
 u_int8_t ss_state = 0;
 u_int32_t t_capture;
 u_int32_t dt;
@@ -90,6 +92,7 @@ float bmp_temp, bmp_pres, bmp_alt, bmp_ref_alt, bmp_apogee_alt;
 char file_name[100];
 char read_name[100];
 
+String user_inp;
 String p_log1 = "";
 String p_log2 = "";
 String p_com = "";
@@ -99,6 +102,8 @@ File sd_file;
 File read_file;
 
 String comma(const String &inp);
+
+float relative(float inp_x, float ref_x);
 
 void printDirectory(File dir, uint8_t num_tabs);
 
@@ -151,33 +156,38 @@ void setup() {
 
 void loop() {
     if (Serial.available() > 0) {
-        String user_inp = Serial.readString();
-        if (user_inp == "SYS_CMD_REQUEST_DEVICE_ID") {
-            Serial.print("SYS_RESPOND_DEVICE_ID_");
-            Serial.println(device_id);
-        }
-        if (os_state == 0) {
-            if (user_inp == "READ_SD") {
-                Serial.println("Beginning SD Card Read Mode...");
-                os_state = 1;
-            }
-            if (user_inp == "END_OP") {
-                os_state = 255;
-            }
-        } else if (os_state == 2 and user_inp != "START_OP") {
+        user_inp = Serial.readString();
+        if (os_state == 2) {
             if (user_inp == "END_READ") {
                 os_state = 255;
             } else {
-                user_inp.toCharArray(read_name, 100);
-                read_file = SD.open(read_name, FILE_READ);
                 os_state = 3;
             }
-        }
-        if (os_state != 0) {
-            if (user_inp == "START_OP") {
-                os_state = 0;
+        } else if (os_state == 254) {
+            if (dfu_state != 0) {
+                if (user_inp == "SYS_CMD_REQUEST_DEVICE_ID") {
+                    dfu_state = 2;
+                } else if (user_inp == "READ_EEPROM") {
+                    dfu_state = 4;
+                } else if (user_inp == "WRITE_EEPROM") {
+                    dfu_state = 6;
+                } else if (user_inp == "EXIT_DFU") {
+                    os_state = 0;
+                    dfu_state = 0;
+                }
             }
+
+        } else if (user_inp == "START_OP") {
+            os_state = 0;
+        } else if (user_inp == "READ_SD") {
+            os_state = 1;
+        } else if (user_inp == "ENTER_DFU") {
+            os_state = 254;
+            dfu_state = 1;
+        } else if (user_inp == "END_OP") {
+            os_state = 255;
         }
+
     }
 
     // operational mode
@@ -270,6 +280,8 @@ void loop() {
 
         // sd read inp
     else if (os_state == 3) {
+        user_inp.toCharArray(read_name, 100);
+        read_file = SD.open(read_name, FILE_READ);
         if (read_file) {
             while (read_file.available()) {
                 char inp_c_file = read_file.read();
@@ -280,10 +292,46 @@ void loop() {
         }
         os_state = 2;
     }
+
+        // dfu
+    else if (os_state == 254) {
+        if (dfu_state == 2) {
+            Serial.print("SYS_RESPOND_DEVICE_ID_");
+            Serial.println(device_id);
+            dfu_state = 0;
+
+        } else if (dfu_state == 4) {
+            while (Serial.available() <= 0);
+            user_inp = Serial.readString();
+            if (user_inp.length() > 0) {
+                int arg_read_addr = user_inp.toInt();
+                int eeprom_read = EEPROM.read(arg_read_addr);
+                Serial.println(eeprom_read);
+            }
+            dfu_state = 0;
+        } else if (dfu_state == 6) {
+            while (Serial.available() <= 0);
+            user_inp = Serial.readString();
+            if (user_inp.length() > 0) {
+                int arg_write_addr = user_inp.toInt();
+                while (Serial.available() <= 0);
+                user_inp = Serial.readString();
+                if (user_inp.length() > 0) {
+                    int arg_write_val = user_inp.toInt();
+                    EEPROM.update(arg_write_addr, arg_write_val);
+                }
+            }
+            dfu_state = 0;
+        }
+    }
 }
 
 String comma(const String &inp) {
-    return inp + ",";
+    return (inp + ",");
+}
+
+float relative(float inp_x, float ref_x) {
+    return (inp_x - ref_x);
 }
 
 void printDirectory(File dir, uint8_t num_tabs) {
