@@ -38,4 +38,10 @@ There are three integers specifying the state of software:
 
 ## Commands
 Commands can be written via Serial command line.
-1. `START_OP`
+1. `START_OP` triggers update `os_state` to `0` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`).
+2. `READ_SD` triggers update `os_state` to `1` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`). After `READ_SD`, user can input Filename indefinitely until triggered by `END_READ`.
+3. `ENTER_DFU` triggers update `os_state` to `254` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`).
+4. `END_OP` triggers update `os_state` to `255` in all conditions other than in SD Read Mode or DFU Mode (`os_state` is `2` or `254`).
+5. `END_READ` triggers update `os_state` to `255` only when in SD Read Mode (`os_state` is `2`).
+6. `SYS_CMD_REQUEST_DEVICE_ID` triggers update `dfu_state` to `2` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`).
+7. `READ_EEPROM` triggers update `dfu_state` to `4` only when enabled DFU Mode (`os_state` is `254` and `dfu_state` is not `0`). After `READ_EEPROM`
