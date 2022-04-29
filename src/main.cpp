@@ -107,6 +107,8 @@ float relative(float inp_x, float ref_x);
 
 void printDirectory(File dir, uint8_t num_tabs);
 
+void deleteAllFiles(File dir);
+
 void setup() {
     // PIN
     pinMode(LED_BUILTIN, OUTPUT);
@@ -128,7 +130,9 @@ void setup() {
     SPI.setCS(P_SD_CS);
 
     // SD
-    SD.begin(P_SD_CS);
+    if (!SD.begin(BUILTIN_SDCARD)) {
+        SD.begin(P_SD_CS);
+    }
     int sd_file_idx = 0;
     while (true) {
         String file_name_str = (F_NAME + String(sd_file_idx) + F_EXT);
@@ -157,7 +161,11 @@ void setup() {
 void loop() {
     if (Serial.available() > 0) {
         user_inp = Serial.readString();
-        if (os_state == 2) {
+        if (user_inp == "CHECK_STATE") {
+            Serial.println(os_state);
+            Serial.println(ss_state);
+            Serial.println(dfu_state);
+        } else if (os_state == 2) {
             if (user_inp == "END_READ") {
                 os_state = 255;
             } else {
@@ -171,7 +179,7 @@ void loop() {
                     dfu_state = 4;
                 } else if (user_inp == "WRITE_EEPROM") {
                     dfu_state = 6;
-                } else if (user_inp == "CLEAR_EEPROM") {
+                } else if (user_inp == "SYS_ADMIN_CMD_CLEAR_EEPROM") {
                     dfu_state = 8;
                 } else if (user_inp == "EXIT_DFU") {
                     os_state = 0;
@@ -183,6 +191,8 @@ void loop() {
             os_state = 0;
         } else if (user_inp == "READ_SD") {
             os_state = 1;
+        } else if (user_inp == "SYS_ADMIN_CMD_DELETION_ALL_SD") {
+            os_state = 4;
         } else if (user_inp == "ENTER_DFU") {
             os_state = 254;
             dfu_state = 1;
@@ -285,14 +295,26 @@ void loop() {
         user_inp.toCharArray(read_name, 100);
         read_file = SD.open(read_name, FILE_READ);
         if (read_file) {
+            Serial.println("OBJ_SD_START_READ " + String(read_file.name()));
             while (read_file.available()) {
-                char inp_c_file = read_file.read();
-                Serial.print(inp_c_file);
+                Serial.write(read_file.read());
             }
             Serial.println();
+            Serial.println("OBJ_SD_END_READ");
             read_file.close();
         }
         os_state = 2;
+
+    } else if (os_state == 4) {
+        while (Serial.available() <= 0);
+        user_inp = Serial.readString();
+        if (user_inp == "CONFIRM_SYS_ADMIN_CMD_DELETION_ALL_SD") {
+            root = SD.open("/");
+            Serial.println(F("-------------"));
+            deleteAllFiles(root);
+            Serial.println(F("-------------"));
+        }
+        os_state = 0;
     }
 
         // dfu
@@ -324,12 +346,16 @@ void loop() {
             }
 
         } else if (dfu_state == 8) {
-            // TEENSY 4.0 CLEAR 0 to 1079
-            for (int idx_eepr_clear = 0; idx_eepr_clear < 1080; idx_eepr_clear++) {
-                EEPROM.update(idx_eepr_clear, 0);
+            while (Serial.available() <= 0);
+            user_inp = Serial.readString();
+            if (user_inp == "CONFIRM_SYS_ADMIN_CMD_CLEAR_EEPROM") {
+                // TEENSY 4.0 CLEAR 0 to 1079
+                for (int idx_eepr_clear = 0; idx_eepr_clear < 1080; idx_eepr_clear++) {
+                    EEPROM.update(idx_eepr_clear, 0);
+                }
             }
         }
-        dfu_state = 0;
+        dfu_state = 1;
     }
 }
 
@@ -356,6 +382,18 @@ void printDirectory(File dir, uint8_t num_tabs) {
         } else {
             Serial.print("\t\t");
             Serial.println(entry.size(), DEC);
+        }
+        entry.close();
+    }
+}
+
+void deleteAllFiles(File dir) {
+    File entry;
+    while (true) {
+        entry = dir.openNextFile();
+        if (!entry) break;
+        if (!entry.isDirectory()) {
+            SD.remove(entry.name());
         }
         entry.close();
     }
