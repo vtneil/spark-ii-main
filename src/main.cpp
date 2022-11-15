@@ -12,28 +12,15 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <Adafruit_BMP3XX.h>
-#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+#include <SparkFun_Ublox_Arduino_Library.h>
 #include <TinyGPS++.h>
 
-// Define constants
-#define SERIAL_BAUD 115200
-#define ATGM336H_BAUD 9600
-#define LORA_BAUD 115200
+#include "states.h"
+#include "definitions.h"
+#include "spark_tools.h"
 
-// Define pins
-#define P_SD_CS 10
-#define P_SD_MOSI 11
-#define P_SD_MISO 12
-#define P_SD_SCK 13
-
-#define P_RX_TEENSY_MAIN 21
-#define P_TX_TEENSY_MAIN 20
-
-#define P_RX_ATGM336H 14
-#define P_TX_ATGM336H 15
-
-#define P_RX_LORA 0
-#define P_TX_LORA 1
+// Define device id
+const u_int8_t device_id = 0;
 
 // Global objects, constants, variables
 const float SEALEVELPRESSURE_HPA = 1013.25;
@@ -65,11 +52,10 @@ const String PK_HEADER = "SPARK2,";
 const String F_NAME = "S2_MAIN_";
 const String F_EXT = ".csv";
 
-// Define device id
-const u_int8_t device_id = 0;
+// Hardware objects
 
 Adafruit_BMP3XX bmp388;
-SFE_UBLOX_GNSS mainGPS;
+SFE_UBLOX_GPS mainGPS;
 TinyGPSPlus secGPS;
 
 // os_state: 0 is default operation, 1 is wait for sd read, 2 is wait for user input
@@ -100,14 +86,6 @@ String p_com = "";
 File root;
 File sd_file;
 File read_file;
-
-String comma(const String &inp);
-
-float relative(float inp_x, float ref_x);
-
-void printDirectory(File dir, uint8_t num_tabs);
-
-void deleteAllFiles(File dir);
 
 void setup() {
     // PIN
@@ -155,6 +133,9 @@ void setup() {
     mainGPS.setI2COutput(COM_TYPE_UBX);
     mainGPS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
     gps0_ref_alt = mainGPS.getAltitude();
+
+    HardwareState s = HardwareState();
+    s.t();
 
     delay(1000);
 }
@@ -359,45 +340,5 @@ void loop() {
             }
         }
         dfu_state = 1;
-    }
-}
-
-String comma(const String &inp) {
-    return (inp + ",");
-}
-
-float relative(float inp_x, float ref_x) {
-    return (inp_x - ref_x);
-}
-
-void printDirectory(File dir, uint8_t num_tabs) {
-    File entry;
-    while (true) {
-        entry = dir.openNextFile();
-        if (!entry) break;
-        for (uint8_t i = 0; i < num_tabs; i++) {
-            Serial.print("\t");
-        }
-        Serial.print(entry.name());
-        if (entry.isDirectory()) {
-            Serial.println("/");
-            printDirectory(entry, num_tabs + 1);
-        } else {
-            Serial.print("\t\t");
-            Serial.println(entry.size(), DEC);
-        }
-        entry.close();
-    }
-}
-
-void deleteAllFiles(File dir) {
-    File entry;
-    while (true) {
-        entry = dir.openNextFile();
-        if (!entry) break;
-        if (!entry.isDirectory()) {
-            SD.remove(entry.name());
-        }
-        entry.close();
     }
 }
