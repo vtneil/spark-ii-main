@@ -15,38 +15,39 @@
 #include <SparkFun_Ublox_Arduino_Library.h>
 #include <TinyGPS++.h>
 
-#include "states.h"
-#include "definitions.h"
-#include "spark_tools.h"
+#include "contexts.hpp"
+#include "states.hpp"
+#include "definitions.hpp"
+#include "spark_tools.hpp"
 
 // Define device id
-const u_int8_t device_id = 0;
+constexpr u_int8_t device_id = 0;
 
 // Global objects, constants, variables
-const float SEALEVELPRESSURE_HPA = 1013.25;
-const float M_G = 9.81;
+constexpr float SEALEVELPRESSURE_HPA = 1013.25;
+constexpr float M_G = 9.81;
 
 // Define functionality interval in ms
 
 // RATE_GPS Default: 1000
-const u_int16_t RATE_GPS = 1000;
+constexpr u_int16_t RATE_GPS = 1000;
 
 // RATE_SENSOR Default: 500
-const u_int16_t RATE_SENSOR = 500;
+constexpr u_int16_t RATE_SENSOR = 500;
 
 // RATE_DATALOG Default: 100
-const u_int16_t RATE_DATALOG = 100;
+constexpr u_int16_t RATE_DATALOG = 100;
 
 // RATE_DATACOM Default: 500
-const u_int16_t RATE_DATACOM = 500;
+constexpr u_int16_t RATE_DATACOM = 500;
 
 // FIRE_HOLD Default: 2000
-const u_int16_t FIRE_HOLD = 2000;
+constexpr u_int16_t FIRE_HOLD = 2000;
 
 // Define apogee in m, s
-const u_int16_t APOGEE_HEIGHT = 900;
-const float APOGEE_TIME = 13;
-const float APOGEE_THRESHOLD = 0.95;
+constexpr u_int16_t APOGEE_HEIGHT = 900;
+constexpr float APOGEE_TIME = 13;
+constexpr float APOGEE_THRESHOLD = 0.95;
 
 const String PK_HEADER = "SPARK2,";
 const String F_NAME = "S2_MAIN_";
@@ -135,7 +136,6 @@ void setup() {
     gps0_ref_alt = mainGPS.getAltitude();
 
     HardwareState s = HardwareState();
-    s.t();
 
     delay(1000);
 }

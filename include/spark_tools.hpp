@@ -1,8 +1,29 @@
-#ifndef SPARK_II_MAIN_SPARK_TOOLS_H
-#define SPARK_II_MAIN_SPARK_TOOLS_H
+#ifndef SPARK_II_MAIN_SPARK_TOOLS_HPP
+#define SPARK_II_MAIN_SPARK_TOOLS_HPP
 
 #include <Arduino.h>
-#include "definitions.h"
+#include "definitions.hpp"
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+class charBuffer {
+protected:
+    char *buffer;
+
+public:
+    explicit charBuffer(uint8_t length) : buffer(new char[length]) {}
+
+    ~charBuffer() {
+        delete[] buffer;
+    }
+};
 
 struct GPSData {
     double latitude;
